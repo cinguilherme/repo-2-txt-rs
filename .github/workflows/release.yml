@@ -1,0 +1,53 @@
+name: Cross-Platform Release
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-release:
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The Rust targets you want
+        target: [x86_64-apple-darwin, aarch64-apple-darwin]
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Extract commit message
+        id: commit_msg
+        run: echo "MESSAGE=$(git log -1 --pretty=%B)" >> $GITHUB_OUTPUT
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        
+      - name: Install additional targets
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Build
+        if: contains(steps.commit_msg.outputs.MESSAGE, 'release')
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Create Release
+        if: contains(steps.commit_msg.outputs.MESSAGE, 'release') && matrix.target == 'x86_64-apple-darwin'
+        id: create_release
+        uses: actions/create-release@v1
+        with:
+          tag_name: "v0.1.0"
+          release_name: "repo-2-text-rs Release"
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload release asset
+        if: contains(steps.commit_msg.outputs.MESSAGE, 'release')
+        uses: actions/upload-release-asset@v1
+        with:
+          # Re-use the release created in the previous step
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: target/${{ matrix.target }}/release/repo-2-text-rs
+          asset_name: repo-2-text-rs-${{ matrix.target }}
+          asset_content_type: application/octet-stream
