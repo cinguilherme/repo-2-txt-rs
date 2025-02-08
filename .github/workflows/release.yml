@@ -18,7 +18,7 @@ jobs:
             target: aarch64-apple-darwin
             archive: tar.gz
           - os: ubuntu-latest
-            target: i686-unknown-linux-gnu
+            target: linux-x86_64
             archive: tar.gz
           - os: windows-latest
             target: i686-pc-windows-gnu
