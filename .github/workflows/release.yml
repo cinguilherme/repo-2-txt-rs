@@ -26,6 +26,9 @@ jobs:
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
 
+      - name: List release directory
+        run: ls -la target/${{ matrix.target }}/release
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -64,6 +67,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
             path: artifacts
+        
+      - name: List downloaded artifacts
+        run: find artifacts -type f -exec ls -la {} \;
+
+      - name: List release directory
+        run: ls -la target/${{ matrix.target }}/release
+    
 
       - name: Upload Assets
         if: contains(steps.commit_msg.outputs.MESSAGE, 'release')
