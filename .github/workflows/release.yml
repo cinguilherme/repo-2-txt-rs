@@ -29,11 +29,16 @@ jobs:
       - name: List release directory
         run: ls -la target/${{ matrix.target }}/release
 
+      - name: Package binary for ${{ matrix.target }}
+        run: |
+            cd target/${{ matrix.target }}/release
+            tar -czvf repo-2-text-rs-${{ matrix.target }}.tar.gz repo-2-text-rs
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: repo-2-text-rs-${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/repo-2-text-rs
+            name: repo-2-text-rs-${{ matrix.target }}
+            path: target/${{ matrix.target }}/release/repo-2-text-rs-${{ matrix.target }}.tar.gz
 
   release:
     needs: build
@@ -74,21 +79,19 @@ jobs:
       - name: Upload Assets
         if: contains(steps.commit_msg.outputs.MESSAGE, 'release')
         run: |
-            # Remove placeholder part from the URL
             upload_url="${{ steps.create_release.outputs.upload_url }}"
             upload_url="${upload_url%\{*}"
-            # Find each file in the artifacts folder
-            for asset in $(find artifacts -type f); do
-            # Get the parent directory name as the unique target identifier
+            for asset in $(find artifacts -type f -name '*.tar.gz'); do
             artifact_dir=$(dirname "$asset")
             unique_name=$(basename "$artifact_dir")
-            echo "Uploading $unique_name from $asset to $upload_url?name=$unique_name"
+            asset_name="repo-2-text-rs-${unique_name}.tar.gz"
+            echo "Uploading $asset_name from $asset to $upload_url?name=$asset_name"
             curl -s \
                 -X POST \
                 -H "Authorization: token $GITHUB_TOKEN" \
                 -H "Content-Type: application/octet-stream" \
                 --data-binary @"$asset" \
-                "$upload_url?name=$unique_name"
+                "$upload_url?name=$asset_name"
             done
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
