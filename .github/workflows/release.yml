@@ -74,15 +74,18 @@ jobs:
       - name: Upload Assets
         if: contains(steps.commit_msg.outputs.MESSAGE, 'release')
         run: |
+            # Remove the placeholder part from the upload URL
+            upload_url="${{ steps.create_release.outputs.upload_url }}"
+            upload_url="${upload_url%\{*}"
             for asset in $(find artifacts -type f); do
             name=$(basename "$asset")
-            echo "Uploading $name"
+            echo "Uploading $name to $upload_url?name=$name"
             curl -s \
                 -X POST \
                 -H "Authorization: token $GITHUB_TOKEN" \
                 -H "Content-Type: application/octet-stream" \
                 --data-binary @"$asset" \
-                "${{ steps.create_release.outputs.upload_url }}?name=$name"
+                "$upload_url?name=$name"
             done
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
