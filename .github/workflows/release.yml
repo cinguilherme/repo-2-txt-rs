@@ -68,7 +68,7 @@ jobs:
       - name: Upload Assets
         if: contains(steps.commit_msg.outputs.MESSAGE, 'release')
         run: |
-            for asset in artifacts/*; do
+            for asset in $(find artifacts -type f); do
             name=$(basename "$asset")
             echo "Uploading $name"
             curl -s \
