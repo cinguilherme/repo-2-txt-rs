@@ -1,0 +1,147 @@
+-- ./src/scan_files.rs --scan_files.rs
+use walkdir::{DirEntry, WalkDir};
+
+fn is_hidden(entry: &DirEntry) -> bool {
+    // If the file name starts with '.', treat it as hidden
+    if let Some(name) = entry.file_name().to_str() {
+        name.starts_with('.')
+    } else {
+        false
+    }
+}
+
+pub fn scan_path(
+    root_path: &str,
+    extensions: &[String],
+    ignore_hidden: bool,
+) -> Vec<std::path::PathBuf> {
+    let mut files = Vec::new();
+
+    // Use `filter_entry` to exclude hidden directories/files upfront
+    let walker = WalkDir::new(root_path).into_iter().filter_entry(|e| {
+        if ignore_hidden {
+            !is_hidden(e)
+        } else {
+            true
+        }
+    });
+
+    for entry in walker.filter_map(Result::ok) {
+        // Only collect actual files
+        if entry.file_type().is_file() {
+            if extensions.is_empty() {
+                files.push(entry.path().to_path_buf());
+            } else if let Some(ext) = entry.path().extension().and_then(|os| os.to_str()) {
+                // The user might pass `.rs`, so compare accordingly
+                let file_ext = format!(".{}", ext);
+                if extensions.contains(&file_ext) {
+                    files.push(entry.path().to_path_buf());
+                }
+            }
+        }
+    }
+
+    files
+}
+-- ./src/output.rs --output.rs
+use std::path::PathBuf;
+use std::fs::{File, OpenOptions};
+use std::io::{self, Write, Read};
+
+/// Writes the contents of each file in `scanned_files` to `output_file`
+/// in the format:
+///
+/// -- file_path --file_name
+/// <contents>
+///
+pub fn write_output(
+    scanned_files: &[PathBuf],
+    output_file: &str,
+) -> io::Result<()> {
+    // Open (or create) the output file, truncating any previous contents
+    let mut out = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(output_file)?;
+
+    // For each path, read its contents, then write to the output
+    for path in scanned_files {
+        // Convert path to a string for printing
+        let path_str = path.display().to_string();
+        
+        // Extract just the file name (or fallback)
+        let file_name = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("<no_name>");
+
+        // Read the file
+        let mut contents = String::new();
+        File::open(path)?.read_to_string(&mut contents)?;
+
+        // Write the section header
+        writeln!(out, "-- {} --{}", path_str, file_name)?;
+        // Write the file contents
+        writeln!(out, "{}", contents)?;
+    }
+
+    Ok(())
+}
+-- ./src/main.rs --main.rs
+use clap::{Arg, Command, ArgAction};
+
+mod scan_files;
+mod output;
+use scan_files::scan_path;
+use output::write_output;
+
+fn main() {
+    let matches = Command::new("repo-2-text-rs")
+        .version("0.1.0")
+        .author("Your Name <you@example.com>")
+        .about("Converts a repo’s files into a single text output")
+        .arg(
+            Arg::new("path")
+                .help("Path to the root folder")
+                .required(true)
+                .index(1),
+        )
+        .arg(
+            Arg::new("types")
+                .long("types")
+                .help("File extensions to include (e.g. .rs, .md, etc.)")
+                // Accept one or more occurrences
+                .num_args(1..) 
+                // If you’d like to accept multiple values separated by commas/spaces
+                .use_value_delimiter(true),
+        )
+        .arg(
+            Arg::new("ignore-hidden-folders")
+                .long("ignore-hidden-folders")
+                .help("Skips hidden folders")
+                // For booleans in Clap 4, use action instead of .takes_value()
+                .action(ArgAction::SetTrue),
+        )
+        .get_matches();
+
+    // Extract values
+    let path = matches.get_one::<String>("path").unwrap();
+    let extensions = matches
+        .get_many::<String>("types")
+        .map(|vals| vals.cloned().collect::<Vec<_>>())
+        .unwrap_or_default();
+    let ignore_hidden = matches.get_flag("ignore-hidden-folders");
+
+    println!("Path: {}", path);
+    println!("Types: {:?}", extensions);
+    println!("Ignore hidden folders: {}", ignore_hidden);
+
+    let scans = scan_path(&path, &extensions, ignore_hidden);
+
+    write_output(&scans, "output.txt").expect("Failed to write output");
+
+    // continue with your directory walking / output logic...
+}
+
+
