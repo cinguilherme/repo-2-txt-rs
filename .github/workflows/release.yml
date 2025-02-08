@@ -25,7 +25,7 @@ jobs:
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
-        
+
       - name: Install additional targets
         run: rustup target add ${{ matrix.target }}
 
@@ -48,9 +48,10 @@ jobs:
       - name: Upload release asset
         if: contains(steps.commit_msg.outputs.MESSAGE, 'release')
         uses: actions/upload-release-asset@v1
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          # Re-use the release created in the previous step
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: target/${{ matrix.target }}/release/repo-2-text-rs
-          asset_name: repo-2-text-rs-${{ matrix.target }}
-          asset_content_type: application/octet-stream
+            upload_url: ${{ steps.create_release.outputs.upload_url }}
+            asset_path: target/${{ matrix.target }}/release/repo-2-text-rs
+            asset_name: repo-2-text-rs-${{ matrix.target }}
+            asset_content_type: application/octet-stream
