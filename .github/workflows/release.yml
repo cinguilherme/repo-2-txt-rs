@@ -71,10 +71,6 @@ jobs:
       - name: List downloaded artifacts
         run: find artifacts -type f -exec ls -la {} \;
 
-      - name: List release directory
-        run: ls -la target/${{ matrix.target }}/release
-    
-
       - name: Upload Assets
         if: contains(steps.commit_msg.outputs.MESSAGE, 'release')
         run: |
