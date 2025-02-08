@@ -43,36 +43,40 @@ jobs:
         id: commit_msg
         run: echo "MESSAGE=$(git log -1 --pretty=%B)" >> $GITHUB_OUTPUT
 
+      - name: Generate timestamp
+        id: timestamp
+        run: echo "TIMESTAMP=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
+
       - name: Create Release
         if: contains(steps.commit_msg.outputs.MESSAGE, 'release')
         id: create_release
         uses: actions/create-release@v1
         with:
-          tag_name: "v0.1.0"
-          release_name: "repo-2-text-rs Release"
-          draft: false
-          prerelease: false
+            tag_name: "release-${{ steps.timestamp.outputs.TIMESTAMP }}"
+            release_name: "repo-2-text-rs Release"
+            draft: false
+            prerelease: false
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download Artifacts
         if: contains(steps.commit_msg.outputs.MESSAGE, 'release')
         uses: actions/download-artifact@v4
         with:
-          path: artifacts
+            path: artifacts
 
       - name: Upload Assets
         if: contains(steps.commit_msg.outputs.MESSAGE, 'release')
         run: |
-          for asset in artifacts/*; do
+            for asset in artifacts/*; do
             name=$(basename "$asset")
             echo "Uploading $name"
             curl -s \
-              -X POST \
-              -H "Authorization: token $GITHUB_TOKEN" \
-              -H "Content-Type: application/octet-stream" \
-              --data-binary @"$asset" \
-              "${{ steps.create_release.outputs.upload_url }}?name=$name"
-          done
+                -X POST \
+                -H "Authorization: token $GITHUB_TOKEN" \
+                -H "Content-Type: application/octet-stream" \
+                --data-binary @"$asset" \
+                "${{ steps.create_release.outputs.upload_url }}?name=$name"
+            done
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
