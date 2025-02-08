@@ -14,20 +14,20 @@ jobs:
       matrix:
         target: [x86_64-apple-darwin, aarch64-apple-darwin]
     steps:
-      - name: Check out code
+      - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Set up Rust
+      - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install target
+      - name: Add target
         run: rustup target add ${{ matrix.target }}
 
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v3
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
         with:
           name: repo-2-text-rs-${{ matrix.target }}
           path: target/${{ matrix.target }}/release/repo-2-text-rs
@@ -36,10 +36,10 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Check out code
+      - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Extract commit message
+      - name: Get commit message
         id: commit_msg
         run: echo "MESSAGE=$(git log -1 --pretty=%B)" >> $GITHUB_OUTPUT
 
@@ -57,7 +57,7 @@ jobs:
 
       - name: Download Artifacts
         if: contains(steps.commit_msg.outputs.MESSAGE, 'release')
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: artifacts
 
